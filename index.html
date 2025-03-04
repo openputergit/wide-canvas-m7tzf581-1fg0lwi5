@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .active-tab {
+            border-bottom: 2px solid #3B82F6;
+            color: #3B82F6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        <!-- Login/Register Section -->
+        <div id="auth-section" class="container mx-auto px-4 py-8">
+            <div class="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800" id="auth-title">Login</h2>
+                </div>
+                <form id="auth-form" class="space-y-4">
+                    <div class="hidden" id="name-field">
+                        <label class="block text-sm font-medium text-gray-700">Name</label>
+                        <input type="text" id="name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-500 text-white rounded-md py-2 hover:bg-blue-600">Login</button>
+                </form>
+                <p class="mt-4 text-center text-sm text-gray-600">
+                    <a href="#" id="toggle-auth" class="text-blue-500 hover:text-blue-700">Create an account</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Main App Section -->
+        <div id="main-section" class="hidden">
+            <!-- Navigation -->
+            <nav class="bg-white shadow-lg">
+                <div class="container mx-auto px-4">
+                    <div class="flex justify-between items-center py-4">
+                        <h1 class="text-xl font-bold text-gray-800">Finance Manager</h1>
+                        <button id="logout-btn" class="text-gray-600 hover:text-gray-800">
+                            <i class="bi bi-box-arrow-right text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Dashboard -->
+            <div class="container mx-auto px-4 py-8">
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Income</h3>
+                        <p class="text-2xl font-bold text-green-500" id="total-income">$0.00</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Expenses</h3>
+                        <p class="text-2xl font-bold text-red-500" id="total-expenses">$0.00</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">Net Balance</h3>
+                        <p class="text-2xl font-bold text-blue-500" id="net-balance">$0.00</p>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <canvas id="expense-chart"></canvas>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <canvas id="income-expense-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Transactions Section -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-800">Transactions</h2>
+                        <button onclick="openAddModal()" class="bg-blue-500 text-white rounded-md px-4 py-2 hover:bg-blue-600">
+                            Add Transaction
+                        </button>
+                    </div>
+
+                    <!-- Transaction Filters -->
+                    <div class="flex flex-wrap gap-4 mb-6">
+                        <input type="text" id="search" placeholder="Search transactions..." 
+                            class="border rounded-md px-4 py-2 flex-grow md:flex-grow-0">
+                        <select id="category-filter" class="border rounded-md px-4 py-2">
+                            <option value="">All Categories</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Rent">Rent</option>
+                            <option value="Food">Food</option>
+                            <option value="Travel">Travel</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Others">Others</option>
+                        </select>
+                        <select id="type-filter" class="border rounded-md px-4 py-2">
+                            <option value="">All Types</option>
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                        </select>
+                    </div>
+
+                    <!-- Transactions Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-table-body">
+                                <!-- Transactions will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Transaction Modal -->
+        <div id="add-modal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center">
+            <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+            <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto">
+                <div class="modal-content py-4 text-left px-6">
+                    <div class="flex justify-between items-center pb-3">
+                        <p class="text-2xl font-bold">Add Transaction</p>
+                        <button class="modal-close cursor-pointer z-50">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <form id="transaction-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Type</label>
+                            <select id="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                                <option value="income">Income</option>
+                                <option value="expense">Expense</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Category</label>
+                            <select id="category" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                                <option value="Salary">Salary</option>
+                                <option value="Rent">Rent</option>
+                                <option value="Food">Food</option>
+                                <option value="Travel">Travel</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Others">Others</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Amount</label>
+                            <input type="number" id="amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Description</label>
+                            <input type="text" id="description" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Date</label>
+                            <input type="date" id="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-500 text-white rounded-md py-2 hover:bg-blue-600">Add Transaction</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let currentUser = null;
+        let transactions = [];
+
+        // DOM Elements
+        const authSection = document.getElementById('auth-section');
+        const mainSection = document.getElementById('main-section');
+        const authForm = document.getElementById('auth-form');
+        const authTitle = document.getElementById('auth-title');
+        const toggleAuth = document.getElementById('toggle-auth');
+        const nameField = document.getElementById('name-field');
+        const transactionForm = document.getElementById('transaction-form');
+        const modal = document.getElementById('add-modal');
+        const searchInput = document.getElementById('search');
+        const categoryFilter = document.getElementById('category-filter');
+        const typeFilter = document.getElementById('type-filter');
+
+        // Initialize charts
+        let expenseChart = new Chart(document.getElementById('expense-chart'), {
+            type: 'pie',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#FF6384',
+                        '#36A2EB',
+                        '#FFCE56',
+                        '#4BC0C0',
+                        '#9966FF'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Expenses by Category'
+                    }
+                }
+            }
+        });
+
+        let incomeExpenseChart = new Chart(document.getElementById('income-expense-chart'), {
+            type: 'bar',
+            data: {
+                labels: ['Income', 'Expenses'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: ['#4CAF50', '#F44336']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Income vs Expenses'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Event Listeners
+        toggleAuth.addEventListener('click', () => {
+            const isLogin = authTitle.textContent === 'Login';
+            authTitle.textContent = isLogin ? 'Register' : 'Login';
+            toggleAuth.textContent = isLogin ? 'Already have an account?' : 'Create an account';
+            nameField.classList.toggle('hidden');
+        });
+
+        authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const isLogin = authTitle.textContent === 'Login';
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (isLogin) {
+                // Simple mock login
+                currentUser = { email };
+                showMainSection();
+            } else {
+                const name = document.getElementById('name').value;
+                currentUser = { name, email };
+                showMainSection();
+            }
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            currentUser = null;
+            transactions = [];
+            showAuthSection();
+        });
+
+        transactionForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            addTransaction();
+        });
+
+        // Search and filter functionality
+        searchInput.addEventListener('input', filterTransactions);
+        categoryFilter.addEventListener('change', filterTransactions);
+        typeFilter.addEventListener('change', filterTransactions);
+
+        // Modal functionality
+        function openAddModal() {
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            document.getElementById('date').valueAsDate = new Date();
+        }
+
+        function closeAddModal() {
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            transactionForm.reset();
+        }
+
+        document.querySelector('.modal-close').addEventListener('click', closeAddModal);
+        document.querySelector('.modal-overlay').addEventListener('click', closeAddModal);
+
+        // Transaction Management
+        function addTransaction() {
+            const type = document.getElementById('type').value;
+            const category = document.getElementById('category').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const description = document.getElementById('description').value;
+            const date = document.getElementById('date').value;
+
+            const transaction = {
+                id: Date.now(),
+                type,
+                category,
+                amount,
+                description,
+                date
+            };
+
+            transactions.push(transaction);
+            updateDashboard();
+            closeAddModal();
+        }
+
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            updateDashboard();
+        }
+
+        function filterTransactions() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const categoryValue = categoryFilter.value;
+            const typeValue = typeFilter.value;
+
+            const filtered = transactions.filter(t => {
+                const matchesSearch = t.description.toLowerCase().includes(searchTerm) ||
+                                   t.category.toLowerCase().includes(searchTerm);
+                const matchesCategory = !categoryValue || t.category === categoryValue;
+                const matchesType = !typeValue || t.type === typeValue;
+
+                return matchesSearch && matchesCategory && matchesType;
+            });
+
+            displayTransactions(filtered);
+        }
+
+        function displayTransactions(transactionsToDisplay) {
+            const tbody = document.getElementById('transactions-table-body');
+            tbody.innerHTML = '';
+
+            transactionsToDisplay.forEach(t => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">${t.date}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            ${t.type === 'income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${t.type}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">${t.category}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${t.description}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium ${t.type === 'income' ? 'text-green-500' : 'text-red-500'}">
+                        $${t.amount.toFixed(2)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <button onclick="deleteTransaction(${t.id})" class="text-red-500 hover:text-red-700">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateCharts() {
+            // Update expense chart
+            const expensesByCategory = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((acc, t) => {
+                    acc[t.category] = (acc[t.category] || 0) + t.amount;
+                    return acc;
+                }, {});
+
+            expenseChart.data.labels = Object.keys(expensesByCategory);
+            expenseChart.data.datasets[0].data = Object.values(expensesByCategory);
+            expenseChart.update();
+
+            // Update income vs expense chart
+            const totalIncome = transactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + t.amount, 0);
+            const totalExpenses = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            incomeExpenseChart.data.datasets[0].data = [totalIncome, totalExpenses];
+            incomeExpenseChart.update();
+        }
+
+        function updateSummary() {
+            const totalIncome = transactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + t.amount, 0);
+            const totalExpenses = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+            const netBalance = totalIncome - totalExpenses;
+
+            document.getElementById('total-income').textContent = `$${totalIncome.toFixed(2)}`;
+            document.getElementById('total-expenses').textContent = `$${totalExpenses.toFixed(2)}`;
+            document.getElementById('net-balance').textContent = `$${netBalance.toFixed(2)}`;
+        }
+
+        function updateDashboard() {
+            displayTransactions(transactions);
+            updateCharts();
+            updateSummary();
+        }
+
+        function showMainSection() {
+            authSection.classList.add('hidden');
+            mainSection.classList.remove('hidden');
+            updateDashboard();
+        }
+
+        function showAuthSection() {
+            mainSection.classList.add('hidden');
+            authSection.classList.remove('hidden');
+            authForm.reset();
+        }
+
+        // Initialize with some sample data
+        transactions = [
+            {
+                id: 1,
+                type: 'income',
+                category: 'Salary',
+                amount: 5000,
+                description: 'Monthly salary',
+                date: '2023-11-01'
+            },
+            {
+                id: 2,
+                type: 'expense',
+                category: 'Rent',
+                amount: 1500,
+                description: 'Monthly rent',
+                date: '2023-11-02'
+            },
+            {
+                id: 3,
+                type: 'expense',
+                category: 'Food',
+                amount: 200,
+                description: 'Groceries',
+                date: '2023-11-03'
+            }
+        ];
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
